@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -8,8 +10,10 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/YvanJAquino/dfcx-sfdc-oauth2/dfcx"
+	"github.com/go-redis/redis/v8"
 )
 
 var (
@@ -51,7 +55,8 @@ func (r *OAuth2Request) Encode(code string) *http.Request {
 	return req
 }
 
-func RichHyperLink(url string) *dfcx.RichContents {
+func RichHyperLink(s string) *dfcx.RichContents {
+	url := "https://cloudcolosseum-dev-ed.my.salesforce.com/services/oauth2/authorize?client_id=3MVG9p1Q1BCe9GmCjkWZeRQ0vWIHjTtfeOjOsKl0XUWOVuSNQdZ4QzNogu25T_GNO3G3BmaNz.dbQIlYlctCV&redirect_uri=https://sfdc-oauth2-63ietzwyxq-uk.a.run.app/callback&response_type=code&state=" + s
 	contents := &dfcx.RichContent{
 		Type: "button",
 		Icon: &dfcx.Icon{
@@ -63,6 +68,42 @@ func RichHyperLink(url string) *dfcx.RichContents {
 	return &dfcx.RichContents{
 		RichContent: [][]*dfcx.RichContent{{contents}},
 	}
+}
+
+var parent = context.Background()
+
+// Refactor to use Secret Manager
+var opts = &redis.Options{
+	Addr:     "10.62.49.107:6378",
+	Password: "", // no password set
+	DB:       0,  // use default DB
+}
+var rdb = redis.NewClient(opts)
+
+type Session struct {
+	Session string
+	Token   string
+}
+
+func (d *Session) MarshalBinary() ([]byte, error) {
+	return json.Marshal(d)
+}
+
+func (d *Session) ToRedis(ctx context.Context, rdb *redis.Client, key string) error {
+	err := rdb.Set(ctx, key, d, 12*time.Hour).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *Session) FromRedis(ctx context.Context, rdb *redis.Client, key string) error {
+	s, err := rdb.Get(ctx, key).Result()
+	if err != nil {
+		return err
+	}
+	json.Unmarshal([]byte(s), d)
+	return nil
 }
 
 func main() {
@@ -77,12 +118,20 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
+			session, err := wr.SessionInfo.ExtractSession()
+			if err != nil {
+				log.Fatal(err)
+			}
+			var s Session
+			s.Session = wr.SessionInfo.Session
+			go s.ToRedis(parent, rdb, session)
+
 			msg := &dfcx.RichContentsMessage{
 				Payload: RichHyperLink(wr.SessionInfo.Session),
 			}
-			var wrsp dfcx.WebhookResponse
-			wrsp.TextResponse(w, "Login here!") // not gonna work...!
-			wrsp.FulfillmentResponse.Messages = append(wrsp.FulfillmentResponse.Messages, msg)
+			resp := dfcx.NewTextResponse("Click on the link below to login. Once you've logged in, you can say 'done' to move forward. ")
+			resp.AddMessage(msg)
+			resp.Respond(w)
 		})
 
 	http.HandleFunc("/callback",
@@ -96,6 +145,8 @@ func main() {
 			if err != nil {
 				log.Fatal("Error during QueryUnescape: ", err)
 			}
+			var s Session
+			s.FromRedis(parent, rdb, state)
 			var oauth OAuth2Request
 			req := oauth.Encode(code)
 			if err != nil {
@@ -108,7 +159,15 @@ func main() {
 				log.Fatal(err)
 			}
 			defer resp.Body.Close()
-			io.Copy(w, resp.Body)
+			io.Copy(os.Stdout, resp.Body)
+			htmlFile, err := os.Open("static/callback-response.html")
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer htmlFile.Close()
+			w.Header().Set("Content-Type", "text/html")
+			io.Copy(w, htmlFile)
+			// io.Copy(w, resp.Body)
 			// https://cloud.google.com/go/docs/reference/cloud.google.com/go/dialogflow/latest/cx/apiv3beta1#cloud_google_com_go_dialogflow_cx_apiv3beta1_SessionsClient_DetectIntent
 		},
 	)

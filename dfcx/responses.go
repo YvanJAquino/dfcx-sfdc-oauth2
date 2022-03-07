@@ -10,16 +10,33 @@ type Message interface {
 }
 
 type WebhookResponse struct {
-	FulfillmentResponse FulfillmentResponse `json:"fulfillmentResponse,omitempty"`
-	PageInfo            PageInfo            `json:"pageInfo,omitempty"`
-	SessionInfo         SessionInfo         `json:"sessionInfo,omitempty"`
-	Payload             map[string]string   `json:"payload,omitempty"`
+	FulfillmentResponse *FulfillmentResponse `json:"fulfillmentResponse,omitempty"`
+	PageInfo            *PageInfo            `json:"pageInfo,omitempty"`
+	SessionInfo         *SessionInfo         `json:"sessionInfo,omitempty"`
+	Payload             map[string]string    `json:"payload,omitempty"`
+}
+
+func (r *WebhookResponse) Respond(w http.ResponseWriter) error {
+	err := json.NewEncoder(w).Encode(r)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *WebhookResponse) AddMessage(m Message) *WebhookResponse {
+	r.FulfillmentResponse.AddMessage(m)
+	return r
 }
 
 type FulfillmentResponse struct {
 	// https://pkg.go.dev/google.golang.org/genproto/googleapis/cloud/dialogflow/cx/v3beta1#ResponseMessage
 	Messages      []Message `json:"messages,omitempty"`
 	MergeBehavior int
+}
+
+func (fr *FulfillmentResponse) AddMessage(m Message) {
+	fr.Messages = append(fr.Messages, m)
 }
 
 // Response Messages
@@ -62,6 +79,20 @@ type RichContents struct {
 	RichContent [][]*RichContent `json:"richContent"`
 }
 
+func (cs *RichContents) AddContents(c *RichContent) {
+	// How to properly check for initialization?
+	cs.RichContent[0] = append(cs.RichContent[0], c)
+}
+
+func NewRichContentsMessage(c *RichContent) *RichContentsMessage {
+	var rcm RichContentsMessage
+	if c == nil {
+		return &rcm
+	}
+	rcm.Payload.AddContents(c)
+	return &rcm
+}
+
 type RichContent struct {
 	Type  string `json:"type"`
 	Title string `json:"title"`
@@ -83,6 +114,20 @@ type Event struct {
 }
 
 // Helpers
+func NewTextResponse(msgs ...string) *WebhookResponse {
+	return &WebhookResponse{
+		FulfillmentResponse: &FulfillmentResponse{
+			Messages: []Message{
+				&TextMessage{
+					Text: Text{
+						Text: msgs,
+					},
+				},
+			},
+		},
+	}
+}
+
 func (wr *WebhookResponse) TextResponse(w http.ResponseWriter, msgs ...string) {
 	t := Text{
 		Text:                      msgs,
@@ -93,7 +138,7 @@ func (wr *WebhookResponse) TextResponse(w http.ResponseWriter, msgs ...string) {
 		Text: t,
 	}
 
-	wr.FulfillmentResponse = FulfillmentResponse{
+	wr.FulfillmentResponse = &FulfillmentResponse{
 		Messages:      []Message{&m},
 		MergeBehavior: 0,
 	}
@@ -112,7 +157,7 @@ func (wr *WebhookResponse) SSMLResponse(w http.ResponseWriter, msg string) {
 		OutputAudioText: t,
 	}
 
-	wr.FulfillmentResponse = FulfillmentResponse{
+	wr.FulfillmentResponse = &FulfillmentResponse{
 		Messages:      []Message{&m},
 		MergeBehavior: 0,
 	}

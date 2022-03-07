@@ -2,7 +2,9 @@ package dfcx
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 )
 
 // Structs
@@ -48,6 +50,16 @@ type PageInfo struct {
 type SessionInfo struct {
 	Session    string            `json:"session,omitempty"`
 	Parameters map[string]string `json:"parameters,omitempty"`
+}
+
+func (si *SessionInfo) ExtractSession() (string, error) {
+	// projects/PROJECT/locations/LOCATION/agents/AGENT/sessions/SESSION
+	parts := strings.Split(si.Session, "/")
+	if len(parts) < 8 {
+		return "", fmt.Errorf("the provided session string was too short: %d", len(parts))
+	}
+	return parts[7], nil
+
 }
 
 type FulfillmentInfo struct {
