@@ -16,6 +16,8 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
+// Argolis Address: https://sfdc-oauth2-a67fdjzmma-uc.a.run.app/generate-login
+
 var (
 	LOGIN_URL          = "https://login.salesforce.com/services/oauth2/token"
 	INSTANCE_LOGIN_URL = "https://cloudcolosseum-dev-ed.my.salesforce.com/services/oauth2/token"
@@ -122,9 +124,10 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
+			fmt.Println(session)
 			var s Session
 			s.Session = wr.SessionInfo.Session
-			go s.ToRedis(parent, rdb, session)
+			s.ToRedis(parent, rdb, session)
 
 			msg := &dfcx.RichContentsMessage{
 				Payload: RichHyperLink(wr.SessionInfo.Session),
