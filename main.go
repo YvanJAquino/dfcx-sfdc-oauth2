@@ -114,6 +114,16 @@ func main() {
 		PORT = "8081"
 	}
 
+	http.HandleFunc("/",
+		func(w http.ResponseWriter, r *http.Request) {
+			msg := &struct {
+				Message string
+			}{
+				Message: "Hello World!",
+			}
+			json.NewEncoder(w).Encode(msg)
+		})
+
 	http.HandleFunc("/generate-login",
 		func(w http.ResponseWriter, r *http.Request) {
 			wr, err := dfcx.FromRequest(r)
