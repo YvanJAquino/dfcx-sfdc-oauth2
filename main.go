@@ -75,8 +75,10 @@ func RichHyperLink(s string) *dfcx.RichContents {
 var parent = context.Background()
 
 // Refactor to use Secret Manager
+// CMS: 10.62.49.107:6378
+// GCE: 10.0.0.2:6379
 var opts = &redis.Options{
-	Addr:     "10.62.49.107:6378",
+	Addr:     "10.0.0.2:6379",
 	Password: "", // no password set
 	DB:       0,  // use default DB
 }
@@ -139,6 +141,7 @@ func main() {
 			s.Session = wr.SessionInfo.Session
 			err = s.ToRedis(parent, rdb, session)
 			if err != nil {
+				fmt.Println("Error during connecting with Redis")
 				log.Fatal(err)
 			}
 
@@ -164,6 +167,7 @@ func main() {
 			var s Session
 			err = s.FromRedis(parent, rdb, state)
 			if err != nil {
+				fmt.Println("Callback: Error during accessing redis")
 				log.Fatal(err)
 			}
 			var oauth OAuth2Request
