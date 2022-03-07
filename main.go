@@ -137,7 +137,10 @@ func main() {
 			fmt.Println(session)
 			var s Session
 			s.Session = wr.SessionInfo.Session
-			s.ToRedis(parent, rdb, session)
+			err = s.ToRedis(parent, rdb, session)
+			if err != nil {
+				log.Fatal(err)
+			}
 
 			msg := &dfcx.RichContentsMessage{
 				Payload: RichHyperLink(wr.SessionInfo.Session),
@@ -154,12 +157,15 @@ func main() {
 				log.Fatal("Error during QueryUnescape: ", err)
 			}
 			state, err := url.QueryUnescape(r.URL.Query().Get("state"))
-			fmt.Println(state)
+			fmt.Println("Callback state: ", state)
 			if err != nil {
 				log.Fatal("Error during QueryUnescape: ", err)
 			}
 			var s Session
-			s.FromRedis(parent, rdb, state)
+			err = s.FromRedis(parent, rdb, state)
+			if err != nil {
+				log.Fatal(err)
+			}
 			var oauth OAuth2Request
 			req := oauth.Encode(code)
 			if err != nil {
