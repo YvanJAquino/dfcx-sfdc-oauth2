@@ -1,22 +1,25 @@
 package dfcx
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 )
 
 // Structs
 type WebhookRequest struct {
-	DetectIntentResponseID string          `json:"detectIntentResponseId,omitempty"`
-	IntentInfo             IntentInfo      `json:"intentInfo,omitempty"`
-	PageInfo               PageInfo        `json:"pageInfo,omitempty"`
-	SessionInfo            SessionInfo     `json:"sessionInfo,omitempty"`
-	FulfillmentInfo        FulfillmentInfo `json:"fulfillmentInfo,omitempty"`
-	Messages               []Messages      `json:"messages,omitempty"`
-	Text                   string          `json:"text,omitempty"`
-	LanguageCode           string          `json:"languageCode,omitempty"`
+	DetectIntentResponseID string                 `json:"detectIntentResponseId,omitempty"`
+	IntentInfo             IntentInfo             `json:"intentInfo,omitempty"`
+	PageInfo               PageInfo               `json:"pageInfo,omitempty"`
+	SessionInfo            SessionInfo            `json:"sessionInfo,omitempty"`
+	FulfillmentInfo        FulfillmentInfo        `json:"fulfillmentInfo,omitempty"`
+	Messages               []Messages             `json:"messages,omitempty"`
+	Payload                map[string]interface{} `json:"payload,omitempty"`
+	Text                   string                 `json:"text,omitempty"`
+	LanguageCode           string                 `json:"languageCode,omitempty"`
 }
 
 func (wr *WebhookRequest) FromRequest(r *http.Request) error {
@@ -27,13 +30,55 @@ func (wr *WebhookRequest) FromRequest(r *http.Request) error {
 	return nil
 }
 
+func (wr *WebhookRequest) FromReader(r io.Reader) error {
+	err := json.NewDecoder(r).Decode(wr)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func FromRequest(r *http.Request) (*WebhookRequest, error) {
 	var wr WebhookRequest
 	err := json.NewDecoder(r.Body).Decode(&wr)
-	if err != nil {
+	if err == nil || err == io.EOF {
+		return &wr, nil
+	} else {
 		return nil, err
 	}
-	return &wr, nil
+}
+
+func FromReader(r io.Reader) (*WebhookRequest, error) {
+	var wr WebhookRequest
+	err := json.NewDecoder(r).Decode(&wr)
+	if err == nil || err == io.EOF {
+		return &wr, nil
+	} else {
+		return nil, err
+	}
+}
+
+// Added to make testing easier.
+type WebhookRequests []*WebhookRequest
+
+func (wrs *WebhookRequests) UnmarshalJSONReader(r io.Reader) error {
+	err := json.NewDecoder(r).Decode(wrs)
+	return err
+}
+
+// Returns Readers to supply as Request Bodies for testing purposes.
+func (wrs *WebhookRequests) UnmarshalJSONToReaders(r io.Reader) ([]io.Reader, error) {
+	wrs.UnmarshalJSONReader(r)
+	var readers []io.Reader
+	for _, wr := range *wrs {
+		var b bytes.Buffer
+		err := json.NewEncoder(&b).Encode(wr)
+		if err != nil {
+			return nil, err
+		}
+		readers = append(readers, &b)
+	}
+	return readers, nil
 }
 
 type IntentInfo struct {

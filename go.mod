@@ -2,7 +2,10 @@ module github.com/YvanJAquino/dfcx-sfdc-oauth2
 
 go 1.17
 
-require github.com/go-redis/redis/v8 v8.11.4
+require (
+	github.com/go-redis/redis v6.15.9+incompatible
+	github.com/go-redis/redis/v8 v8.11.4
+)
 
 require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect

@@ -13,6 +13,5 @@ gcloud alpha run deploy sfdc-oauth2 \
     --platform managed \
     --min-instances 0 \
     --max-instances 5 \
-    --vpc-connector svpca-sandbox-cloud-run \
     --allow-unauthenticated
     
