@@ -92,7 +92,7 @@ type PageInfo struct {
 	DisplayName string   `json:"displayName,omitempty"`
 	FormInfo    FormInfo `json:"formInfo,omitempty"`
 }
-
+// FormInfo has been added 2022-03-15
 type FormInfo struct {
 	ParameterInfo []ParameterInfo `json:"parameterInfo,omitempty"`
 }
