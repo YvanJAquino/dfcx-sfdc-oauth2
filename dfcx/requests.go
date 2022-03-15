@@ -88,8 +88,21 @@ type IntentInfo struct {
 }
 
 type PageInfo struct {
-	CurrentPage string `json:"currentPage,omitempty"`
-	DisplayName string `json:"displayName,omitempty"`
+	CurrentPage string   `json:"currentPage,omitempty"`
+	DisplayName string   `json:"displayName,omitempty"`
+	FormInfo    FormInfo `json:"formInfo,omitempty"`
+}
+
+type FormInfo struct {
+	ParameterInfo []ParameterInfo `json:"parameterInfo,omitempty"`
+}
+
+type ParameterInfo struct {
+	DisplayName   string      `json:"displayName,omitempty"`
+	Required      bool        `json:"required,omitempty"`
+	State         string      `json:"state,omitempty"`
+	Value         interface{} `json:"value,omitempty"`
+	JustCollected bool        `json:"justCollected,omitempty"`
 }
 
 type SessionInfo struct {
