@@ -106,6 +106,7 @@ type ParameterInfo struct {
 	JustCollected bool        `json:"justCollected,omitempty"`
 }
 
+// Updates here.
 type SessionInfo struct {
 	Session    string                 `json:"session,omitempty"`
 	Parameters map[string]interface{} `json:"parameters,omitempty"`
