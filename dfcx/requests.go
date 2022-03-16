@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// Structs
+// Structs are fun ()
 type WebhookRequest struct {
 	DetectIntentResponseID string                 `json:"detectIntentResponseId,omitempty"`
 	IntentInfo             IntentInfo             `json:"intentInfo,omitempty"`
@@ -92,6 +92,7 @@ type PageInfo struct {
 	DisplayName string   `json:"displayName,omitempty"`
 	FormInfo    FormInfo `json:"formInfo,omitempty"`
 }
+
 // FormInfo has been added 2022-03-15
 type FormInfo struct {
 	ParameterInfo []ParameterInfo `json:"parameterInfo,omitempty"`
@@ -106,8 +107,8 @@ type ParameterInfo struct {
 }
 
 type SessionInfo struct {
-	Session    string            `json:"session,omitempty"`
-	Parameters map[string]string `json:"parameters,omitempty"`
+	Session    string                 `json:"session,omitempty"`
+	Parameters map[string]interface{} `json:"parameters,omitempty"`
 }
 
 func (si *SessionInfo) ExtractSession() (string, error) {
